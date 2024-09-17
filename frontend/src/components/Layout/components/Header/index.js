@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { getCookie, deleteCookie } from '~/components/cookies/cookieHelper';
+import { getCookie } from '~/components/cookies/cookieHelper';
 import Button from '~/components/Button';
 import Search from '../Search';
 import styles from './Header.module.scss';
@@ -14,25 +14,37 @@ function Header() {
   const navigate = useNavigate();
 
   useEffect(() => {
+
     const token = getCookie('jwt');
-    setCurrentUser(!!token);
+    console.log(token);
+    setCurrentUser(token);
   }, []);
 
   const handleLogin = () => {
     navigate('/login');
   };
 
-  const handleLogout = () => {
-    deleteCookie('jwt');
-    setCurrentUser(false);
-    navigate('/');
-    window.location.reload(); 
-  };
-
   const handleSignup = () => {
     navigate('/register');
   };
+  const handleLogout = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/v1/logout', {
+        method: 'POST',
+        credentials: 'include',
+      });
 
+      if (!response.ok) {
+        throw new Error('Đăng xuất không thành công!');
+      }
+      setCurrentUser(null);
+      navigate('/');
+      window.location.reload();
+
+    } catch (error) {
+      console.error('Error during logout:', error);
+    }
+  };
   return (
     <header className={cx('wrapper')}>
       <div className={cx('inner')}>
@@ -57,11 +69,12 @@ function Header() {
             <Button primary onClick={handleLogin}>Đăng nhập</Button>
             <Button primary onClick={handleSignup}>Đăng ký</Button>
           </div>
-          
         )}
       </div>
     </header>
   );
-}
+};
+
+
 
 export default Header;

@@ -1,13 +1,16 @@
-//Chức năng này đảm bảo rằng khi người dùng mượn một cuốn sách, thông tin mượn sẽ được lưu vào cơ sở dữ liệu,
-// và đồng thời cập nhật số lượng mượn của tác giả và thể loại sách
-const Borrow = require('../models/Borrowings')
+const Borrow = require('../models/Borrow')
 const GenreCount = require('../models/GenreCount')
 const Books = require('../models/Books')
 const AuthorCount = require('../models/AuthorCount')
 
 const borrow = async (req, res) => {
     try {
-        const { userId, bookId, borrowDate, returnDate } = req.body;
+        const { bookId, borrowDate, returnDate } = req.body;
+        const userId = req.user.userID;
+        console.log("userId:", userId)
+        if (!bookId) {
+            return res.status(400).json({ message: 'Book ID is required' });
+        }
         const newBorrow = new Borrow({
             user: userId,
             book: bookId,

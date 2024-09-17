@@ -5,11 +5,14 @@ import styles from './Profile.module.scss';
 import classNames from 'classnames/bind';
 import Button from '~/components/Button';
 
+import { useNavigate } from 'react-router-dom';
+import { getCookie } from '~/components/cookies/cookieHelper';
 const cx = classNames.bind(styles);
 
 function Profile() {
   const { id } = useParams(); 
-  const [book, setBook] = useState(null);
+  const [book, setBooks] = useState(null);
+  const navigate = useNavigate();
 
   const convertToSlug = (text) => {
     return text
@@ -20,14 +23,14 @@ function Profile() {
   };
 
   useEffect(() => {
-    axios.get('http://localhost:5000/book/allBook')
+    axios.get('http://localhost:5000/api/v1/allBook')
       .then((response) => {
         const allBooks = response.data || [];
         const foundBook = allBooks.find((book) => convertToSlug(book.title) === id);
         if (!foundBook) {
           console.error('Book not found with slug:', id);
         }
-        setBook(foundBook);
+        setBooks(foundBook);
       })
       .catch(error => {
         console.error('Error fetching book data:', error);
@@ -35,11 +38,25 @@ function Profile() {
   }, [id]);
 
   const handleRegister = (bookId) => {
-    fetch(`http://localhost:5000/book/${bookId}`, {
+    console.log("BookID đăng ký:", bookId)
+
+    const token = getCookie('jwt');
+    if (!token) {
+      alert('Bạn cần đăng nhập để mượn sách.');
+      navigate('/login')
+      return
+    }
+    fetch(`http://localhost:5000/api/v1/borrow`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
       },
+      body: JSON.stringify({
+        bookId: bookId,
+        borrowDate: new Date().toISOString(),
+        returnDate: new Date(new Date().setDate(new Date().getDate() + 7)).toISOString()
+      })
     })
       .then(response => {
         if (!response.ok) {
@@ -47,9 +64,12 @@ function Profile() {
         }
         return response.json();
       })
-      .then(() => {
+      .then(data => {
         alert('Đăng ký thành công!');
-        setBook((prevBook) => ({ ...prevBook, registered: true }));
+        fetch('http://localhost:5000/api/v1/allBook?genre')
+          .then(response => response.json())
+          .then(data => setBooks(data || []))
+          .catch(error => console.error('Error fetching updated books:', error));
       })
       .catch(error => {
         alert('Đăng ký không thành công.');

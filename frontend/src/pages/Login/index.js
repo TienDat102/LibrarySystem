@@ -1,27 +1,24 @@
 import React from 'react';
+import { useEffect } from 'react';
 import { Button, Card, Form, Input, message } from "antd";
 import { useNavigate } from "react-router-dom";
-import Cookies from 'js-cookie';
 import axios from 'axios';
 import classNames from 'classnames/bind';
-import styles from './Login.module.scss'; 
-import { Link } from 'react-router-dom';
+import styles from './Login.module.scss';
+import { Link, useLocation } from 'react-router-dom';
 import images from '~/assets/images';
 
 const cx = classNames.bind(styles);
 
 function Login() {
   const navigate = useNavigate();
-
   const onFinish = async (values) => {
     try {
-      // Gửi yêu cầu xác thực đến API
-      const response = await axios.post('http://localhost:5000/auth/login', values);
-      
+      const response = await axios.post('http://localhost:5000/api/v1/login', values, {
+        withCredentials: true
+      });
       if (response.data.success) {
         message.success("Đăng nhập thành công!");
-        const token = response.data.token; 
-        Cookies.set('jwt', token);
         navigate("/");
       } else {
         message.error(response.data.message || "Tài khoản hoặc mật khẩu không chính xác!");
@@ -32,24 +29,21 @@ function Login() {
     }
   };
 
-  const rules = [
-    { required: true, message: 'Vui lòng nhập vào trường này!' }
-  ];
-
   return (
     <div className={cx('login-container')}>
       <div className={cx('logo-tlu')}>
         <Link to="/">
-            <img src={images.logo} alt="Thư viện sách" />
+          <img src={images.logo} alt="Thư viện sách" />
         </Link>
       </div>
       <Card className={cx('login-card')} title="Đăng nhập">
-        <Form onFinish={onFinish} layout="vertical">
-          <Form.Item label="Email" name="email" rules={rules}>
+        <Form name="login" onFinish={onFinish}
+          layout="vertical">
+          <Form.Item label="Email" name="email" rules={[{ required: true, message: 'Vui lòng nhập email!' }]}>
             <Input />
           </Form.Item>
 
-          <Form.Item label="Mật khẩu" name="password" rules={rules}>
+          <Form.Item label="Mật khẩu" name="password" rules={[{ required: true, message: 'Vui lòng nhập mật khẩu!' }]}>
             <Input.Password />
           </Form.Item>
           <Form.Item>
@@ -57,9 +51,9 @@ function Login() {
               Đăng nhập
             </Button>
             <Link to="/register">
-            <Button type='text' htmlType="submit">
-              Đăng ký
-            </Button>
+              <Button type='text' htmlType="submit">
+                Đăng ký
+              </Button>
             </Link>
           </Form.Item>
         </Form>

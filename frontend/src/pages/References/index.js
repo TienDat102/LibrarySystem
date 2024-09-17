@@ -4,7 +4,8 @@ import styles from './References.module.scss';
 import { Button } from 'antd';
 import Pagination from '~/components/Pagination';
 import { Link } from 'react-router-dom';
-
+import { useNavigate } from 'react-router-dom';
+import { getCookie } from '~/components/cookies/cookieHelper';
 const cx = classNames.bind(styles);
 
 const BOOKS_PER_PAGE = 20;
@@ -13,7 +14,7 @@ function References() {
   const [books, setBooks] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
-
+  const navigate = useNavigate();
   // Chuyển đổi title thành slug
   const convertToSlug = (text) => {
     return text
@@ -24,7 +25,7 @@ function References() {
   };
 
   useEffect(() => {
-    fetch('http://localhost:5000/book/allBook?genre=Tailieu')
+    fetch('http://localhost:5000/api/v1/allBook?genre=Tailieu')
       .then(response => response.json())
       .then(data => setBooks(data || []))
       .catch(error => console.error('Error fetching books:', error))
@@ -37,11 +38,25 @@ function References() {
   const totalPages = Math.ceil(books.length / BOOKS_PER_PAGE);
 
   const handleRegister = (bookId) => {
-    fetch(`http://localhost:5000/book/${bookId}`, {
+    console.log("BookID đăng ký:", bookId)
+
+    const token = getCookie('jwt');
+    if (!token) {
+      alert('Bạn cần đăng nhập để mượn sách.');
+      navigate('/login')
+      return
+    }
+    fetch(`http://localhost:5000/api/v1/borrow`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
       },
+      body: JSON.stringify({
+        bookId: bookId,
+        borrowDate: new Date().toISOString(),
+        returnDate: new Date(new Date().setDate(new Date().getDate() + 7)).toISOString()
+      })
     })
       .then(response => {
         if (!response.ok) {
@@ -49,9 +64,9 @@ function References() {
         }
         return response.json();
       })
-      .then(() => {
+      .then(data => {
         alert('Đăng ký thành công!');
-        fetch('http://localhost:5000/book/allBook?genre=Tailieu')
+        fetch('http://localhost:5000/api/v1/allBook?genre')
           .then(response => response.json())
           .then(data => setBooks(data || []))
           .catch(error => console.error('Error fetching updated books:', error));
@@ -61,11 +76,6 @@ function References() {
         console.error('Error updating book:', error);
       });
   };
-
-  if (loading) {
-    return <p>Loading...</p>;
-  }
-
   return (
     <div className={cx('references')}>
       <h2>Tài Liệu Tham Khảo</h2>

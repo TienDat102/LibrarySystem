@@ -6,6 +6,8 @@ import { Button } from 'antd';
 import Pagination from '~/components/Pagination';
 import { Link } from 'react-router-dom';
 
+import { useNavigate } from 'react-router-dom';
+import { getCookie } from '~/components/cookies/cookieHelper';
 const cx = classNames.bind(styles);
 
 const BOOKS_PER_PAGE = 20;
@@ -18,7 +20,7 @@ function Result() {
   const searchParams = new URLSearchParams(location.search);
   const query = searchParams.get('query');
   const subcategory = searchParams.get('subcategory');
-
+  const navigate = useNavigate();
   // Chuyển đổi title thành slug
   const convertToSlug = (text) => {
     return text
@@ -30,7 +32,7 @@ function Result() {
 
   useEffect(() => {
     setLoading(true);
-    fetch(`http://localhost:5000/book/allBook?search=${encodeURIComponent(query || '')}&subcategory=${encodeURIComponent(subcategory || '')}`)
+    fetch(`http://localhost:5000/api/v1/allBook?search=${encodeURIComponent(query || '')}&subcategory=${encodeURIComponent(subcategory || '')}`)
       .then(response => response.json())
       .then(data => setBooks(data))
       .catch(error => console.error('Error fetching books:', error))
@@ -45,11 +47,25 @@ function Result() {
 
   // Hàm xử lý nút Đăng ký
   const handleRegister = (bookId) => {
-    fetch(`http://localhost:5000/book/${bookId}`, {
+    console.log("BookID đăng ký:", bookId)
+
+    const token = getCookie('jwt');
+    if (!token) {
+      alert('Bạn cần đăng nhập để mượn sách.');
+      navigate('/login')
+      return
+    }
+    fetch(`http://localhost:5000/api/v1/borrow`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
       },
+      body: JSON.stringify({
+        bookId: bookId,
+        borrowDate: new Date().toISOString(),
+        returnDate: new Date(new Date().setDate(new Date().getDate() + 7)).toISOString()
+      })
     })
       .then(response => {
         if (!response.ok) {
@@ -57,20 +73,18 @@ function Result() {
         }
         return response.json();
       })
-      .then(() => {
+      .then(data => {
         alert('Đăng ký thành công!');
-        // Tải lại danh sách sách
-        fetch(`http://localhost:5000/book/allBook?search=${encodeURIComponent(query || '')}&subcategory=${encodeURIComponent(subcategory || '')}`)
+        fetch('http://localhost:5000/api/v1/allBook?genre')
           .then(response => response.json())
-          .then(data => setBooks(data))
+          .then(data => setBooks(data || []))
           .catch(error => console.error('Error fetching updated books:', error));
       })
-      .catch(error => console.error('Error updating book:', error));
+      .catch(error => {
+        alert('Đăng ký không thành công.');
+        console.error('Error updating book:', error);
+      });
   };
-
-  if (loading) {
-    return <p>Loading...</p>;
-  }
 
   return (
     <div className={cx('result')}>
